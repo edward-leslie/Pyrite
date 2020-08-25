@@ -56,7 +56,7 @@ static std::vector<std::string> RequiredVulkanExtensionsForGlfw() {
 	return std::vector<std::string>(extensions, extensions + numGlfwExtensions);
 }
 
-vk::UniqueRenderPass BuildRenderPass(vk::Device const& device, vk::Format const& format) {
+static vk::UniqueRenderPass BuildRenderPass(vk::Device const& device, vk::Format const& format) {
 	vk::AttachmentDescription colorAttachment {
 		{},
 		format,
@@ -98,7 +98,7 @@ vk::UniqueRenderPass BuildRenderPass(vk::Device const& device, vk::Format const&
 	return device.createRenderPassUnique(renderPassInfo);
 }
 
-vk::UniquePipeline BuildGraphicsPipeline(
+static vk::UniquePipeline BuildGraphicsPipeline(
 	vk::Device const& device,
 	vk::Extent2D const& extent,
 	vk::PipelineLayout const& pipelineLayout,
@@ -208,6 +208,8 @@ vk::UniquePipeline BuildGraphicsPipeline(
 	};
 	return device.createGraphicsPipelineUnique({}, pipelineInfo);
 }
+
+using namespace vk;
 
 int main(int argc, char** argv) {
 	int result = EXIT_SUCCESS;

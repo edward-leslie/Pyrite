@@ -7,6 +7,7 @@
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
+namespace vk {
 void InitializeDefaultDispatcher() {
 	static vk::DynamicLoader dl;
 	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr =
@@ -343,4 +344,5 @@ vk::UniqueShaderModule BuildShaderModule(vk::Device const& device, std::vector<u
 		il.data()
 	};
 	return device.createShaderModuleUnique(createInfo);
+}
 }
