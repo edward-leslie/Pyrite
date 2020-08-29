@@ -7,7 +7,7 @@
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
-namespace vk {
+namespace py {
 void InitializeDefaultDispatcher() {
 	static vk::DynamicLoader dl;
 	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr =

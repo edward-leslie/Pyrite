@@ -8,7 +8,7 @@
 #include <vector>
 #include <unordered_set>
 
-namespace vk {
+namespace py {
 // Initializes the default dispatcher for extension methods.
 void InitializeDefaultDispatcher();
 

@@ -12,8 +12,10 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#include <utility>
 
 #include "Vulkan.hpp"
+#include "Iterator.hpp"
 
 static std::vector<uint32_t> const VertexShaderIL {
 	#include "Shaders/Triangle.vert.spv"
@@ -104,8 +106,8 @@ static vk::UniquePipeline BuildGraphicsPipeline(
 	vk::PipelineLayout const& pipelineLayout,
 	vk::RenderPass const& renderPass
 ) {
-	vk::UniqueShaderModule vertexShaderModule = BuildShaderModule(device, VertexShaderIL);
-	vk::UniqueShaderModule fragmentShaderModule = BuildShaderModule(device, FragmentShaderIL);
+	vk::UniqueShaderModule vertexShaderModule = py::BuildShaderModule(device, VertexShaderIL);
+	vk::UniqueShaderModule fragmentShaderModule = py::BuildShaderModule(device, FragmentShaderIL);
 	std::vector<vk::PipelineShaderStageCreateInfo> shaderStages {
 		vk::PipelineShaderStageCreateInfo {
 			{},
@@ -209,9 +211,18 @@ static vk::UniquePipeline BuildGraphicsPipeline(
 	return device.createGraphicsPipelineUnique({}, pipelineInfo);
 }
 
-using namespace vk;
+using namespace py;
 
 int main(int argc, char** argv) {
+    std::vector<std::string> v { "foo", "bar", "baz", "qux" };
+    std::vector<std::tuple<std::string, size_t>> u = v
+        | Map([](std::string const& s) { return s + "!"; })
+        | Map([](std::string&& s) { return std::tuple(std::forward<std::string>(s), s.size()); })
+        | Vectorize;
+    for (auto& [s, n] : u) {
+        std::cout << s << "\t" << n << std::endl;
+    }
+
 	int result = EXIT_SUCCESS;
 	try {
 		if (!glfwInit()) {
@@ -341,7 +352,7 @@ int main(int argc, char** argv) {
 				// Draw the next frame.
 				glfwPollEvents();
 
-				syncObjectIndex = syncObjectIndex < maxInFlightImages ? syncObjectIndex : 0;
+				syncObjectIndex = ++syncObjectIndex < maxInFlightImages ? syncObjectIndex : 0;
 				vk::Semaphore& availableImageSemaphore = *availableImageSemaphores[syncObjectIndex];
 				vk::Semaphore& renderFinishedSemaphore = *renderFinishedSemaphores[syncObjectIndex];
 				vk::Fence& inFlightFence = *inFlightFences[syncObjectIndex];
