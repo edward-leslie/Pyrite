@@ -215,12 +215,12 @@ using namespace py;
 
 int main(int argc, char** argv) {
     std::vector<std::string> v { "foo", "bar", "baz", "qux" };
-    std::vector<std::tuple<std::string, size_t>> u = v
+    std::vector<std::string> u { "ed", "edd", "eddy" };
+    std::vector<std::string> w = v
         | Map([](std::string const& s) { return s + "!"; })
-        | Map([](std::string&& s) { return std::tuple(std::forward<std::string>(s), s.size()); })
-        | Vectorize;
-    for (auto& [s, n] : u) {
-        std::cout << s << "\t" << n << std::endl;
+        | AppendTo(std::move(u));
+    for (auto& s : w) {
+        std::cout << s << std::endl;
     }
 
 	int result = EXIT_SUCCESS;

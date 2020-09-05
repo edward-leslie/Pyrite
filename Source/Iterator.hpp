@@ -134,4 +134,18 @@ std::vector<typename IterT::Element> operator|(IterT&& iter, VectorizeType) {
     }
     return vec;
 }
+
+template <typename ElementT>
+struct AppendTo {
+    std::vector<ElementT> _vec;
+    explicit AppendTo(std::vector<ElementT>&& vec) : _vec(std::forward<std::vector<ElementT>>(vec)) { }
+};
+
+template <typename IterT>
+std::vector<typename IterT::Element> operator|(IterT&& iter, AppendTo<typename IterT::Element>&& appendTo) {
+    for (auto&& elem : iter) {
+        appendTo._vec.emplace_back(std::forward<typename IterT::Element>(elem));
+    }
+    return std::move(appendTo._vec);
+}
 }
