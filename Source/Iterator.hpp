@@ -1,13 +1,22 @@
 #pragma once
 
 #include <iterator>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 // TODO: After moving to C++20, we should probably replace this functionality with the ranges library.
-// TODO: Add a size hint function to the iterator classes.
 namespace py {
+struct Bounds {
+    size_t lo;
+    std::optional<size_t> hi;
+
+    Bounds(size_t lo, size_t hi) : lo(lo), hi(hi) { }
+    Bounds(size_t lo, std::optional<size_t> hi) : lo(lo), hi(hi) { }
+    explicit Bounds(size_t lo) : lo(lo), hi(std::nullopt) { }
+    explicit Bounds(std::optional<size_t> hi) : lo(0), hi(hi) { }
+};
 
 template <typename DerivedT>
 class StdIteratorImpl {
@@ -39,12 +48,13 @@ private:
 
     Iterator _iter;
     Iterator _end;
+    std::optional<size_t> _upperBound;
 public:
     using Type = StdContainerIterator<ContainerT>;
     using Element = typename std::iterator_traits<Iterator>::reference;
 
-    explicit StdContainerIterator(Container& c) : _iter(c.begin()), _end(c.end()) { }
-    StdContainerIterator(Iterator& begin, Iterator& end) : _iter(begin), _end(end) { }
+    explicit StdContainerIterator(Container& c) : _iter(c.begin()), _end(c.end()), _upperBound(c.size()) { }
+    StdContainerIterator(Iterator& begin, Iterator& end) : _iter(begin), _end(end), _upperBound(std::nullopt) { }
 
     StdContainerIterator(Type const&) = delete;
     StdContainerIterator(Type&&) noexcept = default;
@@ -54,6 +64,8 @@ public:
     Element operator*() const { return *_iter; }
     operator bool() { return _iter != _end; }
     void operator++() { ++_iter; }
+
+    [[nodiscard]] Bounds SizeHint() const { return Bounds(_upperBound); }
 };
 
 template <typename ContainerT>
@@ -64,12 +76,13 @@ private:
 
     Iterator _iter;
     Iterator _end;
+    std::optional<size_t> _upperBound;
 public:
     using Type = StdContainerConstIterator<ContainerT>;
     using Element = typename std::iterator_traits<Iterator>::reference;
 
-    explicit StdContainerConstIterator(Container const& c) : _iter(c.cbegin()), _end(c.cend()) { }
-    StdContainerConstIterator(Iterator& begin, Iterator& end) : _iter(begin), _end(end) { }
+    explicit StdContainerConstIterator(Container& c) : _iter(c.begin()), _end(c.end()), _upperBound(c.size()) { }
+    StdContainerConstIterator(Iterator& begin, Iterator& end) : _iter(begin), _end(end), _upperBound(std::nullopt) { }
 
     StdContainerConstIterator(Type const&) = delete;
     StdContainerConstIterator(Type&&) noexcept = default;
@@ -79,6 +92,8 @@ public:
     Element operator*() const { return *_iter; }
     operator bool() { return _iter != _end; }
     void operator++() { ++_iter; }
+
+    [[nodiscard]] Bounds SizeHint() const { return Bounds(_upperBound); }
 };
 
 template <typename IterT, typename FnT>
@@ -100,6 +115,8 @@ public:
     Element operator*() const { return _map(*_iter); }
     operator bool() { return _iter; }
     void operator++() { ++_iter; }
+
+    [[nodiscard]] Bounds SizeHint() const { return _iter.SizeHint(); }
 };
 
 template <typename FnT>
@@ -115,12 +132,12 @@ MapIterator<IterT, FnT> operator|(IterT&& iter, Map<FnT>&& map) {
 
 template <typename ContainerT, typename FnT>
 MapIterator<StdContainerIterator<ContainerT>, FnT> operator|(ContainerT& c, Map<FnT>&& map) {
-    return MapIterator(StdContainerIterator(c), std::move(map._fn));
+    return MapIterator(StdContainerIterator(c), std::forward<FnT>(map._fn));
 }
 
 template <typename ContainerT, typename FnT>
 MapIterator<StdContainerConstIterator<ContainerT>, FnT> operator|(ContainerT const& c, Map<FnT>&& map) {
-    return MapIterator(StdContainerConstIterator(c), std::move(map._fn));
+    return MapIterator(StdContainerConstIterator(c), std::forward<FnT>(map._fn));
 }
 
 struct VectorizeType {};
@@ -129,6 +146,11 @@ VectorizeType Vectorize;
 template <typename IterT>
 std::vector<typename IterT::Element> operator|(IterT&& iter, VectorizeType) {
     std::vector<typename IterT::Element> vec;
+    auto [lowerBound, upperBound] = iter.SizeHint();
+    if (upperBound) {
+        vec.reserve(*upperBound);
+    }
+
     for (auto&& elem : iter) {
         vec.emplace_back(std::forward<typename IterT::Element>(elem));
     }
@@ -143,9 +165,15 @@ struct AppendTo {
 
 template <typename IterT>
 std::vector<typename IterT::Element> operator|(IterT&& iter, AppendTo<typename IterT::Element>&& appendTo) {
-    for (auto&& elem : iter) {
-        appendTo._vec.emplace_back(std::forward<typename IterT::Element>(elem));
+    std::vector<typename IterT::Element>& vec = appendTo._vec;
+    auto [lowerBound, upperBound] = iter.SizeHint();
+    if (upperBound) {
+        vec.reserve(*upperBound + vec.size());
     }
-    return std::move(appendTo._vec);
+
+    for (auto&& elem : iter) {
+        vec.emplace_back(std::forward<typename IterT::Element>(elem));
+    }
+    return std::move(vec);
 }
 }

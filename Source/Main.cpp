@@ -216,11 +216,15 @@ using namespace py;
 int main(int argc, char** argv) {
     std::vector<std::string> v { "foo", "bar", "baz", "qux" };
     std::vector<std::string> u { "ed", "edd", "eddy" };
-    std::vector<std::string> w = v
-        | Map([](std::string const& s) { return s + "!"; })
-        | AppendTo(std::move(u));
-    for (auto& s : w) {
-        std::cout << s << std::endl;
+    std::vector<std::string> w = v | Map([](std::string& s) { return s + "!"; }) | Vectorize;
+    std::vector<std::string> x = v | Map([](std::string& s) { return s + "?"; }) | AppendTo(std::move(u));
+
+    for (std::string& s : w) {
+        std::cout << "w\t" << s << std::endl;
+    }
+
+    for (std::string& s : x) {
+        std::cout << "x\t" << s << std::endl;
     }
 
 	int result = EXIT_SUCCESS;
